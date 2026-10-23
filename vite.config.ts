@@ -9,7 +9,7 @@ export default defineConfig({
       userscript: {
         name: 'DeepSeek Chat Enhance',
         namespace: 'ds-chat-enhance',
-        version: '0.1.0',
+        version: '0.7.2',
         description: 'Enhancements for chat.deepseek.com',
         icon: 'https://chat.deepseek.com/favicon.ico',
         match: ['https://chat.deepseek.com/*'],

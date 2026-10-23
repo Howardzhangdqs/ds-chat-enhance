@@ -1,11 +1,12 @@
 {
   "name": "ds-chat-enhance",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.7.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "test": "bun test/scanner.test.ts",
     "preview": "vite preview"
   },
   "devDependencies": {
