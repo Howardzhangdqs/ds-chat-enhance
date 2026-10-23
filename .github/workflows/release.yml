@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: '创建为草稿 Release（不立即公开）'
+        type: boolean
+        default: false
+      prerelease:
+        description: '标记为预发布（Pre-release）'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build & publish userscript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version from package.json
+        id: meta
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::package.json version '$VERSION' is not a valid semver"
+            exit 1
+          fi
+
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
+            echo "::error::Tag $TAG already exists. Bump package.json version before releasing."
+            exit 1
+          fi
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build userscript
+        run: bun run build
+
+      - name: Verify artifact
+        run: |
+          set -euo pipefail
+          FILE=dist/ds-chat-enhance.user.js
+          test -f "$FILE"
+          test -s "$FILE"
+          grep -q "@version[[:space:]]*${{ steps.meta.outputs.version }}" "$FILE"
+          echo "Artifact: $(du -h "$FILE" | cut -f1) $FILE"
+
+      - name: Prepare release flags
+        id: flags
+        env:
+          DRAFT: ${{ inputs.draft }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          FLAGS=""
+          if [ "$DRAFT" = "true" ]; then FLAGS="$FLAGS --draft"; fi
+          if [ "$PRERELEASE" = "true" ]; then FLAGS="$FLAGS --prerelease"; fi
+          echo "flags=$FLAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${{ steps.meta.outputs.tag }}" \
+            dist/ds-chat-enhance.user.js \
+            --title "${{ steps.meta.outputs.tag }}" \
+            --target "$GITHUB_SHA" \
+            --generate-notes \
+            ${{ steps.flags.outputs.flags }}

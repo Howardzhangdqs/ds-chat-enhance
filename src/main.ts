@@ -2,8 +2,11 @@
 import { CodeScanner } from './scanner';
 import { DomBuilder } from './dombuilder';
 
+// 由 vite.config.ts 的 define 注入（来源：package.json version）
+declare const __DSCE_VERSION__: string;
+
 const dsceBoot = () => {
-  const VERSION = '0.7.2';
+  const VERSION = __DSCE_VERSION__;
 
   interface DsceGlobal {
     __DSCE__?: { version: string; destroy?: () => void };

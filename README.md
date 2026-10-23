@@ -25,6 +25,7 @@
 - [项目结构](#项目结构)
 - [开发](#开发)
 - [测试](#测试)
+- [发布](#发布)
 - [可调参数](#可调参数)
 - [安全模型](#安全模型)
 - [常见问题](#常见问题)
@@ -249,6 +250,28 @@ bun run test
 - 文本中的 `<`、注释、属性内特殊字符
 - 分块喂入与一次性喂入的一致性（覆盖所有前缀）
 - token 流结构正确性
+
+## 发布
+
+发布通过 GitHub Actions 手动触发，构建与 Release 创建在同一条流水线里完成。
+
+### 步骤
+
+1. 修改 `package.json` 中的 `version` 并提交、推送（这是**唯一**版本来源，userscript 头部与运行时版本都由它派生）。
+2. 打开仓库的 **Actions → Release → Run workflow**。
+3. 按需勾选：
+   - `draft`：先创建草稿 Release，确认后再发布；
+   - `prerelease`：标记为预发布。
+4. 运行后工作流会依次执行：
+   - 校验 `package.json` 版本为合法 semver；
+   - 检查 `v<version>` 标签是否已存在（存在则失败，避免覆盖历史版本）；
+   - `bun install --frozen-lockfile` + `bun run build`；
+   - 校验产物存在且 `@version` 与版本一致；
+   - 创建 `v<version>` 标签与 GitHub Release，并上传 `dist/ds-chat-enhance.user.js`。
+
+Release 的说明由 GitHub 自动生成（`--generate-notes`），产物直接附带在 Release 附件中，用户可一键下载安装。
+
+> 标签不存在时才允许发布，因此重复触发同一版本会直接失败；升级版本请先更新 `package.json`。
 
 ## 可调参数
 
